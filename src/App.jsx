@@ -60,69 +60,89 @@ const App = () => {
         messages: [
           {
             role: "system",
-            content: `
-Extract the following fields into a clean JSON object.
+          content: `
+          Extract the following fields into a clean JSON object.
 
-VARIABLES:
-payee, tin, address, purpose,
-category (must be exactly one of:
-"training allowance/final pay/ Government Remittances",
-"Manpower / Consultant",
-"Others"),
-currency,
-amount (total amount due),
-amountinwords (convert numeric amount to words),
-accountnum,
-mobilenum,
-sib (invoice/receipt/control number).
+          VARIABLES:
+          payee, tin, address, purpose,
+          category (must be exactly one of:
+          "training allowance/final pay/ Government Remittances",
+          "Manpower / Consultant",
+          "Others"),
+          currency,
+          amount (total amount due),
+          amountinwords (convert numeric amount to words),
+          accountnum,
+          mobilenum,
+          sib (invoice/receipt/control number).
 
-----------------------------
-PAYEE RULES:
-1. The payee is the entity issuing the invoice or receipt.
-2. If the document contains "From:" and "To:", the payee is under "From:".
-3. If the document contains "SOLD TO:", the payee is NOT the SOLD TO entity.
-4. If the document contains "By:", the payee is the entity after "By:".
-5. Never use "Equicom Services, Inc." as payee.
-6. The TIN and address must belong to the payee only.
+          ----------------------------
+          PAYEE RULES:
+          1. The payee is the entity issuing the invoice or receipt (vendor/service provider).
+          2. Do NOT use the following as the payee:
+            - Name: "EQUICOM SERVICES, INC"
+            - TIN: "008-188-644-000"
+            - Address: "2F CIBI BUILDING ZAPOTE COR. MASCARDO, MAKATI CITY, 1200"
+          3. If the document contains "From:" and "To:", the payee is under "From:".
+          4. If the document contains "SOLD TO:" or "Customer Name:", the payee is NOT the entity in that section.
+          5. If the document contains "By:", the payee is the entity after "By:".
+          6. The TIN and address must belong to the payee only.
+          7. The payee name is usually the first company listed at the top or near "From:".
+          8. If uncertain, return null for payee, tin, and address.
 
-----------------------------
-SIB RULES:
-1. SIB is the invoice number, OR number, SOA number, or sales invoice number.
-2. It must belong to the payee.
-3. Extract values labeled:
-   "Invoice No", "Invoice Number",
-   "Sales Invoice", "Official Receipt",
-   "OR No", "SOA", "Billing No".
-4. Ignore:
-   Account Number,
-   Permit Number,
-   Acknowledgement Certificate,
-   REF No,
-   Control numbers unrelated to invoice.
-5. If unclear, return null.
+          ----------------------------
+          SIB RULES:
+          1. SIB is the invoice number, OR number, SOA number, or sales invoice number issued by the payee.
+          2. Extract values clearly labeled as:
+            "Invoice No", "Invoice Number",
+            "Sales Invoice", "Official Receipt",
+            "OR No", "SOA", "Billing No".
+          3. Ignore numbers labeled:
+            Account Number, Permit Number, Acknowledgement Certificate,
+            REF No, Control numbers unrelated to invoice.
+          4. If multiple valid invoice numbers appear, choose the one clearly associated with the payee.
+          5. If unclear, return null.
 
-----------------------------
-AMOUNT RULES:
-1. Use the TOTAL AMOUNT DUE payable to the payee.
-2. If both VAT inclusive and net amounts exist,
-   select the final payable amount.
-3. Convert amount to words.
+          ----------------------------
+          AMOUNT RULES:
+          1. Use the TOTAL AMOUNT DUE payable to the payee.
+          2. If both VAT inclusive and net amounts exist, select the final payable amount.
+          3. Convert numeric amount to words for "amountinwords".
 
-----------------------------
-CURRENCY RULES:
-Detect from symbols like PHP, P, ₱, USD, etc.
+          ----------------------------
+          CURRENCY RULES:
+          1. Detect from symbols like PHP, P, ₱, USD, etc.
+          2. Normalize "P" or "₱" to "PHP".
+          3. If currency cannot be determined, return null.
 
-----------------------------
-CATEGORY RULES:
-- If payroll, allowance, remittance → "training allowance/final pay/ Government Remittances"
-- If service provider, internet, licensing, consulting → "Manpower / Consultant"
-- Otherwise → "Others"
+          ----------------------------
+          CATEGORY RULES:
+          - If payroll, allowance, remittance → "training allowance/final pay/ Government Remittances"
+          - If service provider, internet, licensing, consulting → "Manpower / Consultant"
+          - Otherwise → "Others"
 
-----------------------------
-If any value is uncertain, return null.
-Output ONLY valid JSON.
-`
+          ----------------------------
+          PURPOSE RULES:
+          - Extract a short description of the invoice or service provided.
+          - Usually from "Description", "Nature of Service", or line items.
 
+          ----------------------------
+          ACCOUNTNUM & MOBILENUM:
+          - Extract only if explicitly labeled (e.g., Account Number, Mobile Number).
+          - If missing, return null.
+
+          ----------------------------
+          VALIDATION NOTES:
+          - Ignore any company info that matches Equicom’s name, TIN, or address.
+          - If any value is uncertain, return null.
+          - Output ONLY valid JSON.
+
+          EXTRA:
+          - Anchor payee, TIN, and address to the vendor section (top of document or "From:").
+          - Anchor SIB to the payee-issued invoice/receipt/statement.
+          - Do not pick numbers or addresses associated with the buyer (Equicom).
+
+          `
           },
           { role: "user", content: fullText }
         ],
