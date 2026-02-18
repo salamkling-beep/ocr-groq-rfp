@@ -60,9 +60,69 @@ const App = () => {
         messages: [
           {
             role: "system",
-            content: `Extract the following fields into a clean JSON object. 
-Variables: payee, tin, address, purpose, category (must be: training allowance/final pay/ Government Remittances, Manpower / Consultant , or Others), currency, amount (total), amountinwords (convert the numeric amount to words), accountnum, mobilenum, sib (invoice/receipt/control number). 
-If data is missing, use null. Output ONLY valid JSON.`
+            content: `
+Extract the following fields into a clean JSON object.
+
+VARIABLES:
+payee, tin, address, purpose,
+category (must be exactly one of:
+"training allowance/final pay/ Government Remittances",
+"Manpower / Consultant",
+"Others"),
+currency,
+amount (total amount due),
+amountinwords (convert numeric amount to words),
+accountnum,
+mobilenum,
+sib (invoice/receipt/control number).
+
+----------------------------
+PAYEE RULES:
+1. The payee is the entity issuing the invoice or receipt.
+2. If the document contains "From:" and "To:", the payee is under "From:".
+3. If the document contains "SOLD TO:", the payee is NOT the SOLD TO entity.
+4. If the document contains "By:", the payee is the entity after "By:".
+5. Never use "Equicom Services, Inc." as payee.
+6. The TIN and address must belong to the payee only.
+
+----------------------------
+SIB RULES:
+1. SIB is the invoice number, OR number, SOA number, or sales invoice number.
+2. It must belong to the payee.
+3. Extract values labeled:
+   "Invoice No", "Invoice Number",
+   "Sales Invoice", "Official Receipt",
+   "OR No", "SOA", "Billing No".
+4. Ignore:
+   Account Number,
+   Permit Number,
+   Acknowledgement Certificate,
+   REF No,
+   Control numbers unrelated to invoice.
+5. If unclear, return null.
+
+----------------------------
+AMOUNT RULES:
+1. Use the TOTAL AMOUNT DUE payable to the payee.
+2. If both VAT inclusive and net amounts exist,
+   select the final payable amount.
+3. Convert amount to words.
+
+----------------------------
+CURRENCY RULES:
+Detect from symbols like PHP, P, ₱, USD, etc.
+
+----------------------------
+CATEGORY RULES:
+- If payroll, allowance, remittance → "training allowance/final pay/ Government Remittances"
+- If service provider, internet, licensing, consulting → "Manpower / Consultant"
+- Otherwise → "Others"
+
+----------------------------
+If any value is uncertain, return null.
+Output ONLY valid JSON.
+`
+
           },
           { role: "user", content: fullText }
         ],
