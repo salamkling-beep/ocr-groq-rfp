@@ -154,11 +154,19 @@ const App = () => {
 
       // Step 3: Send to your PHP server
       setStatus("processing: Saving to Server...");
-      const response = await fetch("https://apps.equicomservices.com/rfp/salam.php", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(extractedJson),
-      });
+   // Prepare FormData for JSON + files
+const formData = new FormData();
+formData.append("ocr_structured", JSON.stringify(extractedJson));
+
+// Append all uploaded files
+files.forEach((file) => {
+  formData.append("files[]", file);
+});
+
+const response = await fetch("https://apps.equicomservices.com/rfp21/salam.php", {
+  method: "POST",
+  body: formData, // DO NOT set Content-Type; browser sets it automatically
+});
 
       if (response.ok) {
         setStatus("success");
@@ -180,18 +188,23 @@ const App = () => {
 
         {/* Upload */}
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Upload Documents (Images/PDF/TIF)
-          </label>
-          <input
-            type="file"
-            multiple
-            accept=".png,.jpg,.jpeg,.tif,.tiff,.pdf"
-            onChange={handleFileChange}
-            className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-          />
-        </div>
-
+  <label className="block text-sm font-medium text-gray-700 mb-2">
+    Upload or Snap a Photo (PDF/Images)
+  </label>
+  <input
+    type="file"
+    multiple
+    // "image/*" triggers the camera option on mobile
+    accept="image/*,application/pdf,.tif,.tiff" 
+    // "environment" tells the phone to use the REAR camera by default
+    capture="environment" 
+    onChange={handleFileChange}
+    className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+  />
+  <p className="mt-2 text-xs text-gray-500">
+    Tip: On mobile, this will open your camera directly.
+  </p>
+</div>
         {/* Button */}
         <button
           onClick={processFiles}
